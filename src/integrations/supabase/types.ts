@@ -14,7 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      tasks: {
+        Row: {
+          completed: boolean
+          created_at: string
+          deadline: string
+          id: string
+          note: string | null
+          stopwatch_running: boolean
+          stopwatch_seconds: number
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          deadline: string
+          id?: string
+          note?: string | null
+          stopwatch_running?: boolean
+          stopwatch_seconds?: number
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          deadline?: string
+          id?: string
+          note?: string | null
+          stopwatch_running?: boolean
+          stopwatch_seconds?: number
+          text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
