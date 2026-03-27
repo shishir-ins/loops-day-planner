@@ -1,15 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Check, Trash2, Play, Pause, Timer } from "lucide-react";
-import { Task } from "@/types/task";
+import { Check, Trash2, Play, Pause } from "lucide-react";
+import type { Task } from "@/hooks/useTasks";
 
 interface Props {
   task: Task;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
-  onToggleStopwatch: (id: string) => void;
-  onTick: (id: string) => void;
-  onDeadlineClose: (name: string) => void;
+  onUpdateStopwatch: (id: string, seconds: number, running: boolean) => void;
+  onDeadlineClose?: (name: string) => void;
+  isAdmin?: boolean;
 }
 
 const formatTime = (s: number) => {
@@ -28,25 +28,41 @@ const getCountdown = (deadline: string) => {
   return `${h}h ${m}m left`;
 };
 
-const TaskItem = ({ task, onToggle, onDelete, onToggleStopwatch, onTick, onDeadlineClose }: Props) => {
+const TaskItem = ({ task, onToggle, onDelete, onUpdateStopwatch, onDeadlineClose, isAdmin }: Props) => {
   const [countdown, setCountdown] = useState(getCountdown(task.deadline));
+  const [localSeconds, setLocalSeconds] = useState(task.stopwatch_seconds);
+  const [localRunning, setLocalRunning] = useState(task.stopwatch_running);
+
+  useEffect(() => {
+    setLocalSeconds(task.stopwatch_seconds);
+    setLocalRunning(task.stopwatch_running);
+  }, [task.stopwatch_seconds, task.stopwatch_running]);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCountdown(getCountdown(task.deadline));
       const diff = new Date(task.deadline).getTime() - Date.now();
-      if (diff > 0 && diff < 5 * 60 * 1000) {
+      if (diff > 0 && diff < 5 * 60 * 1000 && onDeadlineClose) {
         onDeadlineClose(task.text);
       }
     }, 30000);
     return () => clearInterval(interval);
   }, [task.deadline, task.text, onDeadlineClose]);
 
+  // Local stopwatch tick
   useEffect(() => {
-    if (!task.stopwatchRunning) return;
-    const interval = setInterval(() => onTick(task.id), 1000);
+    if (!localRunning) return;
+    const interval = setInterval(() => {
+      setLocalSeconds((s) => s + 1);
+    }, 1000);
     return () => clearInterval(interval);
-  }, [task.stopwatchRunning, task.id, onTick]);
+  }, [localRunning]);
+
+  const handleToggleStopwatch = useCallback(() => {
+    const newRunning = !localRunning;
+    setLocalRunning(newRunning);
+    onUpdateStopwatch(task.id, localSeconds, newRunning);
+  }, [localRunning, localSeconds, task.id, onUpdateStopwatch]);
 
   const isOverdue = new Date(task.deadline).getTime() < Date.now();
 
@@ -73,48 +89,48 @@ const TaskItem = ({ task, onToggle, onDelete, onToggleStopwatch, onTick, onDeadl
         </button>
 
         <div className="flex-1 min-w-0">
-          <p
-            className={`font-display font-semibold text-foreground ${
-              task.completed ? "line-through opacity-50" : ""
-            }`}
-          >
+          <p className={`font-display font-semibold text-foreground ${task.completed ? "line-through opacity-50" : ""}`}>
             {task.text}
           </p>
-
+          {task.note && (
+            <p className="text-xs text-muted-foreground mt-1 italic">💌 {task.note}</p>
+          )}
           <div className="flex flex-wrap gap-2 mt-2 text-xs">
-            <span
-              className={`px-2 py-0.5 rounded-full font-medium ${
-                isOverdue && !task.completed
-                  ? "bg-destructive/15 text-destructive"
-                  : "bg-secondary text-secondary-foreground"
-              }`}
-            >
+            <span className={`px-2 py-0.5 rounded-full font-medium ${
+              isOverdue && !task.completed
+                ? "bg-destructive/15 text-destructive"
+                : "bg-secondary text-secondary-foreground"
+            }`}>
               ⏳ {countdown}
             </span>
             <span className="px-2 py-0.5 rounded-full bg-love/10 text-love font-medium">
-              ⏱ {formatTime(task.stopwatchSeconds)}
+              ⏱ {formatTime(localSeconds)}
             </span>
           </div>
         </div>
 
         <div className="flex gap-1.5 flex-shrink-0">
-          <button
-            onClick={() => onToggleStopwatch(task.id)}
-            className="p-1.5 rounded-xl hover:bg-secondary transition-colors"
-            title={task.stopwatchRunning ? "Pause" : "Start timer"}
-          >
-            {task.stopwatchRunning ? (
-              <Pause className="w-4 h-4 text-love" />
-            ) : (
-              <Play className="w-4 h-4 text-primary" />
-            )}
-          </button>
-          <button
-            onClick={() => onDelete(task.id)}
-            className="p-1.5 rounded-xl hover:bg-destructive/10 transition-colors"
-          >
-            <Trash2 className="w-4 h-4 text-destructive/70" />
-          </button>
+          {!isAdmin && (
+            <button
+              onClick={handleToggleStopwatch}
+              className="p-1.5 rounded-xl hover:bg-secondary transition-colors"
+              title={localRunning ? "Pause" : "Start timer"}
+            >
+              {localRunning ? (
+                <Pause className="w-4 h-4 text-love" />
+              ) : (
+                <Play className="w-4 h-4 text-primary" />
+              )}
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => onDelete(task.id)}
+              className="p-1.5 rounded-xl hover:bg-destructive/10 transition-colors"
+            >
+              <Trash2 className="w-4 h-4 text-destructive/70" />
+            </button>
+          )}
         </div>
       </div>
     </motion.div>

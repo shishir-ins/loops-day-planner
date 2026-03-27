@@ -1,64 +1,66 @@
 import { useState, useEffect, useCallback } from "react";
-import { Task } from "@/types/task";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
-const STORAGE_KEY = "loops-day-tasks";
-
-const loadTasks = (): Task[] => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
+export type Task = Tables<"tasks">;
 
 export const useTasks = () => {
-  const [tasks, setTasks] = useState<Task[]>(loadTasks);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
+  // Initial fetch
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    const fetchTasks = async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (!error && data) setTasks(data);
+      setLoading(false);
+    };
+    fetchTasks();
+  }, []);
+
+  // Real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel("tasks-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tasks" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setTasks((prev) => [payload.new as Task, ...prev]);
+          } else if (payload.eventType === "UPDATE") {
+            setTasks((prev) =>
+              prev.map((t) => (t.id === (payload.new as Task).id ? (payload.new as Task) : t))
+            );
+          } else if (payload.eventType === "DELETE") {
+            setTasks((prev) => prev.filter((t) => t.id !== (payload.old as any).id));
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  const addTask = useCallback(async (text: string, deadline: string, note?: string) => {
+    await supabase.from("tasks").insert({ text, deadline, note: note || null });
+  }, []);
+
+  const toggleComplete = useCallback(async (id: string) => {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    await supabase.from("tasks").update({ completed: !task.completed }).eq("id", id);
   }, [tasks]);
 
-  const addTask = useCallback((text: string, deadline: string) => {
-    const task: Task = {
-      id: crypto.randomUUID(),
-      text,
-      completed: false,
-      deadline,
-      createdAt: new Date().toISOString(),
-      stopwatchSeconds: 0,
-      stopwatchRunning: false,
-    };
-    setTasks((prev) => [task, ...prev]);
+  const deleteTask = useCallback(async (id: string) => {
+    await supabase.from("tasks").delete().eq("id", id);
   }, []);
 
-  const toggleComplete = useCallback((id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-    );
+  const updateStopwatch = useCallback(async (id: string, seconds: number, running: boolean) => {
+    await supabase.from("tasks").update({ stopwatch_seconds: seconds, stopwatch_running: running }).eq("id", id);
   }, []);
 
-  const deleteTask = useCallback((id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  const toggleStopwatch = useCallback((id: string) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === id ? { ...t, stopwatchRunning: !t.stopwatchRunning } : t
-      )
-    );
-  }, []);
-
-  const tickStopwatch = useCallback((id: string) => {
-    setTasks((prev) =>
-      prev.map((t) =>
-        t.id === id && t.stopwatchRunning
-          ? { ...t, stopwatchSeconds: t.stopwatchSeconds + 1 }
-          : t
-      )
-    );
-  }, []);
-
-  return { tasks, addTask, toggleComplete, deleteTask, toggleStopwatch, tickStopwatch };
+  return { tasks, loading, addTask, toggleComplete, deleteTask, updateStopwatch };
 };
