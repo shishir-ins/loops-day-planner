@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 const hourlyMessages = [
   "Drink water loops 💖",
@@ -6,36 +6,49 @@ const hourlyMessages = [
   "Fighting! 💪",
   "Take a stretch break 🌿",
   "You're doing great, keep it up! 🌟",
+  "Don't forget to eat something yummy 🍓",
+  "Take a deep breath, you got this 🍃",
 ];
 
 export const useNotifications = () => {
   const permissionRef = useRef(false);
 
   useEffect(() => {
-    if ("Notification" in window) {
+    if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission().then((p) => {
         permissionRef.current = p === "granted";
       });
+    } else if ("Notification" in window) {
+      permissionRef.current = Notification.permission === "granted";
     }
   }, []);
 
+  // Reminders every 30 minutes
   useEffect(() => {
     const interval = setInterval(() => {
       if (permissionRef.current) {
         const msg = hourlyMessages[Math.floor(Math.random() * hourlyMessages.length)];
-        new Notification("Loop's Day! 🍃", { body: msg, icon: "🐼" });
+        new Notification("Loop's Day! 🍃", { body: msg });
       }
-    }, 60 * 60 * 1000);
+    }, 30 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const notifyDeadline = (taskName: string) => {
+  const notifyNewTask = useCallback((taskName: string) => {
+    if (permissionRef.current) {
+      new Notification("✨ New task from your love!", {
+        body: `"${taskName}" was just added for you 💕`,
+      });
+    }
+  }, []);
+
+  const notifyDeadline = useCallback((taskName: string) => {
     if (permissionRef.current) {
       new Notification("⏰ Deadline approaching!", {
         body: `"${taskName}" is almost due! You got this 💖`,
       });
     }
-  };
+  }, []);
 
-  return { notifyDeadline };
+  return { notifyNewTask, notifyDeadline };
 };
