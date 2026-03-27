@@ -10,5 +10,6 @@ if (redirect && redirect !== '/') {
 }
 
 console.log("App starting...");
+console.log("Environment check:", import.meta.env.VITE_SUPABASE_URL);
 
 createRoot(document.getElementById("root")!).render(<App />);
