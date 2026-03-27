@@ -1,11 +1,13 @@
 import { useCallback, useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Lock } from "lucide-react";
+import { Heart, Lock, Plus, Calendar } from "lucide-react";
+import { Link } from "react-router-dom";
 import FloatingLeaves from "@/components/FloatingLeaves";
 import PixelCharacters from "@/components/PixelCharacters";
 import LoveMessages from "@/components/LoveMessages";
 import DateTimeClock from "@/components/DateTimeClock";
 import TaskItem from "@/components/TaskItem";
+import TaskInput from "@/components/TaskInput";
 import SurpriseMessage from "@/components/SurpriseMessage";
 import { useTasks } from "@/hooks/useTasks";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -16,7 +18,7 @@ const Index = () => {
   const [unlocked, setUnlocked] = useState(() => localStorage.getItem("loops-unlocked") === "true");
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState(false);
-  const { tasks, loading, toggleComplete, deleteTask, updateStopwatch } = useTasks();
+  const { tasks, loading, toggleComplete, deleteTask, updateStopwatch, addTask } = useTasks();
   const { notifyNewTask, notifyDeadline } = useNotifications();
   const notifiedRef = useRef<Set<string>>(new Set());
   const prevTaskIdsRef = useRef<Set<string>>(new Set());
@@ -119,6 +121,20 @@ const Index = () => {
           <DateTimeClock />
         </motion.div>
 
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="w-full mb-6">
+          <TaskInput onAdd={addTask} />
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="w-full mb-6">
+          <Link
+            to="/planner"
+            className="glass-strong rounded-2xl p-4 flex items-center justify-center gap-3 text-primary hover:bg-primary/10 transition-all duration-300 group"
+          >
+            <Calendar className="w-5 h-5 group-hover:scale-110 transition-transform" />
+            <span className="font-display font-semibold">Open Daily Planner 🌿</span>
+          </Link>
+        </motion.div>
+
         {loading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground font-display animate-pulse">Loading your tasks... 🍃</p>
@@ -150,7 +166,7 @@ const Index = () => {
             {tasks.length === 0 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
                 <p className="text-5xl mb-3">🌿</p>
-                <p className="font-display text-muted-foreground text-sm">No tasks yet! Your love will add some for you 💕</p>
+                <p className="font-display text-muted-foreground text-sm">No tasks yet! Add your first task or wait for your love to add some 💕</p>
               </motion.div>
             )}
           </div>

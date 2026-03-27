@@ -34,11 +34,21 @@ export const useNotifications = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const notifyNewTask = useCallback((taskName: string) => {
+  const notifyNewTask = useCallback((taskName: string, isAdmin = false) => {
     if (permissionRef.current) {
-      new Notification("✨ New task from your love!", {
-        body: `"${taskName}" was just added for you 💕`,
-      });
+      if (isAdmin) {
+        new Notification("🛡️ Admin Task Added!", {
+          body: `Admin added task: "${taskName}" for loops 💕`,
+        });
+      } else {
+        new Notification("✨ New task from your love!", {
+          body: `"${taskName}" was just added for you 💕`,
+        });
+        // Also notify admin about user's task
+        new Notification("📋 User Task Created", {
+          body: `Loops created task: "${taskName}" 🌿`,
+        });
+      }
     }
   }, []);
 

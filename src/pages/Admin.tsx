@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Lock, Shield } from "lucide-react";
 import FloatingLeaves from "@/components/FloatingLeaves";
@@ -6,6 +6,7 @@ import DateTimeClock from "@/components/DateTimeClock";
 import TaskInput from "@/components/TaskInput";
 import TaskItem from "@/components/TaskItem";
 import { useTasks } from "@/hooks/useTasks";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const ADMIN_PASSCODE = "loopsadmin";
 
@@ -14,6 +15,12 @@ const Admin = () => {
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState(false);
   const { tasks, loading, addTask, toggleComplete, deleteTask, updateStopwatch } = useTasks();
+  const { notifyNewTask } = useNotifications();
+
+  const handleAddTask = useCallback(async (text: string, deadline: string, note?: string) => {
+    await addTask(text, deadline, note);
+    notifyNewTask(text, true);
+  }, [addTask, notifyNewTask]);
 
   const handleUnlock = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +83,7 @@ const Admin = () => {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="w-full mb-6">
-          <TaskInput onAdd={addTask} />
+          <TaskInput onAdd={handleAddTask} />
         </motion.div>
 
         {loading ? (

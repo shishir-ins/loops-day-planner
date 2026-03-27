@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Check, Trash2, Play, Pause } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, Trash2, Play, Pause, Paperclip } from "lucide-react";
 import type { Task } from "@/hooks/useTasks";
+import TaskMaterials from "./TaskMaterials";
+import { useTaskMaterials } from "@/hooks/useTaskMaterials";
 
 interface Props {
   task: Task;
@@ -32,6 +34,8 @@ const TaskItem = ({ task, onToggle, onDelete, onUpdateStopwatch, onDeadlineClose
   const [countdown, setCountdown] = useState(getCountdown(task.deadline));
   const [localSeconds, setLocalSeconds] = useState(task.stopwatch_seconds);
   const [localRunning, setLocalRunning] = useState(task.stopwatch_running);
+  const [showMaterials, setShowMaterials] = useState(false);
+  const { materials, loading, uploadMaterial, deleteMaterial } = useTaskMaterials(task.id);
 
   useEffect(() => {
     setLocalSeconds(task.stopwatch_seconds);
@@ -106,6 +110,13 @@ const TaskItem = ({ task, onToggle, onDelete, onUpdateStopwatch, onDeadlineClose
             <span className="px-2 py-0.5 rounded-full bg-love/10 text-love font-medium">
               ⏱ {formatTime(localSeconds)}
             </span>
+            <button
+              onClick={() => setShowMaterials(!showMaterials)}
+              className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+            >
+              <Paperclip className="w-3 h-3 inline mr-1" />
+              {materials.length}
+            </button>
           </div>
         </div>
 
@@ -133,6 +144,24 @@ const TaskItem = ({ task, onToggle, onDelete, onUpdateStopwatch, onDeadlineClose
           )}
         </div>
       </div>
+
+      <AnimatePresence>
+        {showMaterials && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 pt-4 border-t border-border/50"
+          >
+            <TaskMaterials
+              taskId={task.id}
+              materials={materials}
+              onUpload={uploadMaterial}
+              onDelete={deleteMaterial}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
