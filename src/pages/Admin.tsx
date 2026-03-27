@@ -7,6 +7,7 @@ import TaskInput from "@/components/TaskInput";
 import TaskItem from "@/components/TaskItem";
 import { useTasks } from "@/hooks/useTasks";
 import { useNotifications } from "@/hooks/useNotifications";
+import { supabaseConfigError } from "@/integrations/supabase/client";
 
 const ADMIN_PASSCODE = "loopsadmin";
 
@@ -81,6 +82,12 @@ const Admin = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="glass rounded-2xl px-6 py-4 mb-6 w-full">
           <DateTimeClock />
         </motion.div>
+
+        {supabaseConfigError && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full mb-6 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            This deployment is missing the Supabase secrets, so admin task changes will not sync online until GitHub Actions is configured.
+          </motion.div>
+        )}
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="w-full mb-6">
           <TaskInput onAdd={handleAddTask} />

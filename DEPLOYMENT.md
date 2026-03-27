@@ -25,8 +25,11 @@ git push -u origin main
 
 ### 4. Access Your Live Site
 - **User Page**: `https://[YOUR_USERNAME].github.io/loops-day-planner/`
-- **Admin Panel**: `https://[YOUR_USERNAME].github.io/loops-day-planner/admin`
-- **Daily Planner**: `https://[YOUR_USERNAME].github.io/loops-day-planner/planner`
+- **Admin Panel**: `https://[YOUR_USERNAME].github.io/loops-day-planner/#/admin`
+- **Daily Planner**: `https://[YOUR_USERNAME].github.io/loops-day-planner/#/planner`
+
+If you accidentally open `/admin` or `/planner` without `#`, the included `404.html`
+will redirect those URLs back into the app.
 
 ## 📱 Access Credentials
 - **User Passcode**: `iloveyou`
@@ -79,9 +82,9 @@ After pushing to GitHub, check:
 - Check Actions tab for error logs
 
 ### 404 Errors
-- Ensure base path in `vite.config.ts` matches your repo name
-- Check GitHub Pages settings
-- Verify the build completed successfully
+- Ensure GitHub Pages is set to **GitHub Actions**, not **Deploy from a branch**
+- Make sure the latest Actions deployment finished successfully
+- If the page source shows `/src/main.tsx` in DevTools, GitHub Pages is serving the repo root instead of the built `dist` output
 
 ### Styles Not Loading
 - Check if CSS files are in the dist folder

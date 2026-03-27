@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseConfigError } from "@/integrations/supabase/client";
 
 export type TaskMaterial = {
   id: string;
@@ -22,6 +22,12 @@ export const useTaskMaterials = (taskId: string) => {
         setLoading(false);
         return;
       }
+
+      if (!supabase) {
+        console.warn(supabaseConfigError);
+        setLoading(false);
+        return;
+      }
       
       const { data, error } = await supabase
         .from("task_materials")
@@ -38,7 +44,7 @@ export const useTaskMaterials = (taskId: string) => {
 
   // Real-time subscription
   useEffect(() => {
-    if (!taskId) return;
+    if (!taskId || !supabase) return;
 
     const channel = supabase
       .channel(`task-materials-${taskId}`)
@@ -65,6 +71,7 @@ export const useTaskMaterials = (taskId: string) => {
 
   const uploadMaterial = useCallback(async (file: File) => {
     if (!taskId) throw new Error("Task ID is required");
+    if (!supabase) throw new Error(supabaseConfigError ?? "Supabase is not configured");
 
     // Upload file to Supabase storage
     const fileExt = file.name.split('.').pop();
@@ -106,6 +113,8 @@ export const useTaskMaterials = (taskId: string) => {
   }, [taskId]);
 
   const deleteMaterial = useCallback(async (materialId: string) => {
+    if (!supabase) throw new Error(supabaseConfigError ?? "Supabase is not configured");
+
     // Get material info first
     const material = materials.find(m => m.id === materialId);
     if (!material) throw new Error("Material not found");

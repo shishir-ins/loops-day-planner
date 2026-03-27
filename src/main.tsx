@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
-import App from "./App-simple.tsx";
+import App from "./App.tsx";
 import "./index.css";
 
-console.log("Loops Day Planner starting (simple version)...");
+console.log("Loops Day Planner starting...");
 
 createRoot(document.getElementById("root")!).render(<App />);

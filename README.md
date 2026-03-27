@@ -77,8 +77,7 @@ git push -u origin main
 2. **Enable GitHub Pages**
 - Go to your repository on GitHub
 - Settings → Pages
-- Source: "Deploy from a branch"
-- Branch: `main` and folder: `/root`
+- Source: **GitHub Actions**
 - Click Save
 
 3. **Automatic Deployment**
@@ -137,12 +136,12 @@ INSERT INTO storage.buckets (id, name, public) VALUES ('task-materials', 'task-m
 - **Features**: View tasks, create tasks, upload materials, access planner
 
 ### Admin Access
-- **URL**: `https://[your-domain].com/admin`
+- **URL**: `https://[your-domain].com/#/admin`
 - **Passcode**: `loopsadmin`
 - **Features**: Create tasks, manage all tasks, view notifications
 
 ### Daily Planner
-- **URL**: `https://[your-domain].com/planner`
+- **URL**: `https://[your-domain].com/#/planner`
 - **Access**: Click "Open Daily Planner 🌿" from user page
 - **Features**: Full daily planning with auto-reset
 

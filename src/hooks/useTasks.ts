@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseConfigError } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 export type Task = Tables<"tasks">;
@@ -11,6 +11,12 @@ export const useTasks = () => {
   // Initial fetch
   useEffect(() => {
     const fetchTasks = async () => {
+      if (!supabase) {
+        console.warn(supabaseConfigError);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("tasks")
         .select("*")
@@ -23,6 +29,8 @@ export const useTasks = () => {
 
   // Real-time subscription
   useEffect(() => {
+    if (!supabase) return;
+
     const channel = supabase
       .channel("tasks-realtime")
       .on(
@@ -45,20 +53,24 @@ export const useTasks = () => {
   }, []);
 
   const addTask = useCallback(async (text: string, deadline: string, note?: string) => {
+    if (!supabase) return;
     await supabase.from("tasks").insert({ text, deadline, note: note || null });
   }, []);
 
   const toggleComplete = useCallback(async (id: string) => {
+    if (!supabase) return;
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
     await supabase.from("tasks").update({ completed: !task.completed }).eq("id", id);
   }, [tasks]);
 
   const deleteTask = useCallback(async (id: string) => {
+    if (!supabase) return;
     await supabase.from("tasks").delete().eq("id", id);
   }, []);
 
   const updateStopwatch = useCallback(async (id: string, seconds: number, running: boolean) => {
+    if (!supabase) return;
     await supabase.from("tasks").update({ stopwatch_seconds: seconds, stopwatch_running: running }).eq("id", id);
   }, []);
 
