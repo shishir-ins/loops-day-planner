@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
-  base: mode === "production" ? "/loops-day-planner/" : "/",
+  base: "./",
   build: {
     outDir: "dist",
     assetsDir: "assets",
