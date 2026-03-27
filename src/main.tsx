@@ -9,4 +9,6 @@ if (redirect && redirect !== '/') {
   window.history.replaceState(null, '', redirect);
 }
 
+console.log("App starting...");
+
 createRoot(document.getElementById("root")!).render(<App />);
