@@ -9,7 +9,6 @@ if (redirect && redirect !== '/') {
   window.history.replaceState(null, '', redirect);
 }
 
-console.log("App starting...");
-console.log("Environment check:", import.meta.env.VITE_SUPABASE_URL);
+console.log("Loops Day Planner starting...");
 
 createRoot(document.getElementById("root")!).render(<App />);
