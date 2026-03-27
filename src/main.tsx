@@ -1,14 +1,7 @@
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
+import App from "./App-simple.tsx";
 import "./index.css";
 
-// Handle redirect from 404.html
-const redirect = sessionStorage.getItem('redirect');
-if (redirect && redirect !== '/') {
-  sessionStorage.removeItem('redirect');
-  window.history.replaceState(null, '', redirect);
-}
-
-console.log("Loops Day Planner starting...");
+console.log("Loops Day Planner starting (simple version)...");
 
 createRoot(document.getElementById("root")!).render(<App />);
