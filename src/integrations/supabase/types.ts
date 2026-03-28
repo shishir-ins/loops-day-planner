@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      planner_entries: {
+        Row: {
+          breakfast: string | null
+          created_at: string
+          date: string
+          dinner: string | null
+          for_tomorrow: string | null
+          hours_of_sleep: number | null
+          how_rested: string | null
+          id: string
+          lunch: string | null
+          mood: string | null
+          notes: string | null
+          other_drinks: string | null
+          reminder: string | null
+          schedule: Json | null
+          snacks: string | null
+          todo: Json | null
+          total_minutes: string | null
+          total_steps: string | null
+          updated_at: string
+          water_intake: number | null
+          weather: string | null
+          workout: string | null
+        }
+        Insert: {
+          breakfast?: string | null
+          created_at?: string
+          date: string
+          dinner?: string | null
+          for_tomorrow?: string | null
+          hours_of_sleep?: number | null
+          how_rested?: string | null
+          id?: string
+          lunch?: string | null
+          mood?: string | null
+          notes?: string | null
+          other_drinks?: string | null
+          reminder?: string | null
+          schedule?: Json | null
+          snacks?: string | null
+          todo?: Json | null
+          total_minutes?: string | null
+          total_steps?: string | null
+          updated_at?: string
+          water_intake?: number | null
+          weather?: string | null
+          workout?: string | null
+        }
+        Update: {
+          breakfast?: string | null
+          created_at?: string
+          date?: string
+          dinner?: string | null
+          for_tomorrow?: string | null
+          hours_of_sleep?: number | null
+          how_rested?: string | null
+          id?: string
+          lunch?: string | null
+          mood?: string | null
+          notes?: string | null
+          other_drinks?: string | null
+          reminder?: string | null
+          schedule?: Json | null
+          snacks?: string | null
+          todo?: Json | null
+          total_minutes?: string | null
+          total_steps?: string | null
+          updated_at?: string
+          water_intake?: number | null
+          weather?: string | null
+          workout?: string | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           completed: boolean
