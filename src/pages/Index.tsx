@@ -24,6 +24,11 @@ const Index = () => {
   const { notifyNewTask, notifyDeadline, notificationsSupported, permission, requestPermission } = useNotifications();
   const notifiedRef = useRef<Set<string>>(new Set());
   const prevTaskIdsRef = useRef<Set<string>>(new Set());
+  const localCreatedTaskKeysRef = useRef<Set<string>>(new Set());
+
+  const getLocalTaskKey = useCallback((text: string, deadline: string, note?: string | null) => {
+    return `${text}__${deadline}__${note ?? ""}`;
+  }, []);
 
   // Notify on new tasks from admin
   useEffect(() => {
@@ -31,16 +36,21 @@ const Index = () => {
     const currentIds = new Set(tasks.map((t) => t.id));
     tasks.forEach((t) => {
       if (!prevTaskIdsRef.current.has(t.id) && prevTaskIdsRef.current.size > 0) {
+        const localTaskKey = getLocalTaskKey(t.text, t.deadline, t.note);
+        if (localCreatedTaskKeysRef.current.has(localTaskKey)) {
+          localCreatedTaskKeysRef.current.delete(localTaskKey);
+          return;
+        }
         notifyNewTask(t.text);
       }
     });
     prevTaskIdsRef.current = currentIds;
-  }, [tasks, unlocked, notifyNewTask]);
+  }, [tasks, unlocked, notifyNewTask, getLocalTaskKey]);
 
   const handleDeadlineClose = useCallback(
-    (name: string) => {
-      if (!notifiedRef.current.has(name)) {
-        notifiedRef.current.add(name);
+    (id: string, name: string) => {
+      if (!notifiedRef.current.has(id)) {
+        notifiedRef.current.add(id);
         notifyDeadline(name);
       }
     },
@@ -57,6 +67,15 @@ const Index = () => {
       setTimeout(() => setError(false), 2000);
     }
   };
+
+  const handleAddTask = useCallback(
+    async (text: string, deadline: string, note?: string) => {
+      localCreatedTaskKeysRef.current.add(getLocalTaskKey(text, deadline, note));
+      await addTask(text, deadline, note);
+      notifyNewTask(text);
+    },
+    [addTask, getLocalTaskKey, notifyNewTask]
+  );
 
   if (!unlocked) {
     return (
@@ -136,7 +155,7 @@ const Index = () => {
         )}
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="w-full mb-6">
-          <TaskInput onAdd={addTask} />
+          <TaskInput onAdd={handleAddTask} />
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="w-full mb-6">

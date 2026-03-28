@@ -82,10 +82,9 @@ export const useNotifications = () => {
     (taskName: string, isAdmin = false) => {
       if (permissionRef.current) {
         if (isAdmin) {
-          void showNotification("Admin task added", `Admin added "${taskName}" for Loops.`, "loops-admin-task");
+          void showNotification("Task added", `"${taskName}" was added for Loops.`, "loops-admin-task");
         } else {
-          void showNotification("New task added", `"${taskName}" was just added for you.`, "loops-user-task");
-          void showNotification("User task created", `Loops created "${taskName}".`, "loops-user-created-task");
+          void showNotification("New task added", `"${taskName}" was added to the planner.`, "loops-user-task");
         }
       }
     },
@@ -95,7 +94,7 @@ export const useNotifications = () => {
   const notifyDeadline = useCallback(
     (taskName: string) => {
       if (permissionRef.current) {
-        void showNotification("Deadline approaching", `"${taskName}" is almost due. You have this.`, "loops-deadline");
+        void showNotification("Deadline tomorrow", `"${taskName}" is due within the next day.`, "loops-deadline");
       }
     },
     [showNotification]

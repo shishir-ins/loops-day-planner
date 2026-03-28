@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Trash2, Play, Pause, Paperclip } from "lucide-react";
+import { Check, Trash2, Play, Pause, Paperclip, Calendar } from "lucide-react";
 import type { Task } from "@/hooks/useTasks";
 import TaskMaterials from "./TaskMaterials";
 import { useTaskMaterials } from "@/hooks/useTaskMaterials";
@@ -10,7 +10,7 @@ interface Props {
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onUpdateStopwatch: (id: string, seconds: number, running: boolean) => void;
-  onDeadlineClose?: (name: string) => void;
+  onDeadlineClose?: (id: string, name: string) => void;
   isAdmin?: boolean;
 }
 
@@ -21,17 +21,15 @@ const formatTime = (s: number) => {
   return `${h > 0 ? `${h}h ` : ""}${m}m ${sec}s`;
 };
 
-const getCountdown = (deadline: string) => {
-  const diff = new Date(deadline).getTime() - Date.now();
-  if (diff <= 0) return "⏰ Overdue!";
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  if (h > 24) return `${Math.floor(h / 24)}d ${h % 24}h left`;
-  return `${h}h ${m}m left`;
+const formatDeadline = (deadline: string) => {
+  const date = new Date(deadline);
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 };
 
 const TaskItem = ({ task, onToggle, onDelete, onUpdateStopwatch, onDeadlineClose, isAdmin }: Props) => {
-  const [countdown, setCountdown] = useState(getCountdown(task.deadline));
   const [localSeconds, setLocalSeconds] = useState(task.stopwatch_seconds);
   const [localRunning, setLocalRunning] = useState(task.stopwatch_running);
   const [showMaterials, setShowMaterials] = useState(false);
@@ -43,17 +41,19 @@ const TaskItem = ({ task, onToggle, onDelete, onUpdateStopwatch, onDeadlineClose
   }, [task.stopwatch_seconds, task.stopwatch_running]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCountdown(getCountdown(task.deadline));
+    const checkReminderWindow = () => {
       const diff = new Date(task.deadline).getTime() - Date.now();
-      if (diff > 0 && diff < 5 * 60 * 1000 && onDeadlineClose) {
-        onDeadlineClose(task.text);
+      if (diff > 0 && diff <= 24 * 60 * 60 * 1000 && onDeadlineClose) {
+        onDeadlineClose(task.id, task.text);
       }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [task.deadline, task.text, onDeadlineClose]);
+    };
 
-  // Local stopwatch tick
+    checkReminderWindow();
+    const interval = setInterval(checkReminderWindow, 30 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [task.deadline, task.id, task.text, onDeadlineClose]);
+
   useEffect(() => {
     if (!localRunning) return;
     const interval = setInterval(() => {
@@ -69,6 +69,7 @@ const TaskItem = ({ task, onToggle, onDelete, onUpdateStopwatch, onDeadlineClose
   }, [localRunning, localSeconds, task.id, onUpdateStopwatch]);
 
   const isOverdue = new Date(task.deadline).getTime() < Date.now();
+  const deadlineLabel = `${isOverdue && !task.completed ? "Overdue" : "Due"} ${formatDeadline(task.deadline)}`;
 
   return (
     <motion.div
@@ -83,63 +84,58 @@ const TaskItem = ({ task, onToggle, onDelete, onUpdateStopwatch, onDeadlineClose
       <div className="flex items-start gap-3">
         <button
           onClick={() => onToggle(task.id)}
-          className={`mt-0.5 flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
-            task.completed
-              ? "bg-primary border-primary"
-              : "border-muted-foreground/30 hover:border-primary"
+          className={`mt-0.5 h-6 w-6 flex-shrink-0 rounded-full border-2 transition-all duration-300 flex items-center justify-center ${
+            task.completed ? "border-primary bg-primary" : "border-muted-foreground/30 hover:border-primary"
           }`}
         >
-          {task.completed && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
+          {task.completed && <Check className="h-3.5 w-3.5 text-primary-foreground" />}
         </button>
 
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <p className={`font-display font-semibold text-foreground ${task.completed ? "line-through opacity-50" : ""}`}>
             {task.text}
           </p>
-          {task.note && (
-            <p className="text-xs text-muted-foreground mt-1 italic">💌 {task.note}</p>
-          )}
-          <div className="flex flex-wrap gap-2 mt-2 text-xs">
-            <span className={`px-2 py-0.5 rounded-full font-medium ${
-              isOverdue && !task.completed
-                ? "bg-destructive/15 text-destructive"
-                : "bg-secondary text-secondary-foreground"
-            }`}>
-              ⏳ {countdown}
+          {task.note && <p className="mt-1 text-xs italic text-muted-foreground">Note {task.note}</p>}
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <span
+              className={`rounded-full px-2 py-0.5 font-medium ${
+                isOverdue && !task.completed
+                  ? "bg-destructive/15 text-destructive"
+                  : "bg-secondary text-secondary-foreground"
+              }`}
+            >
+              <Calendar className="mr-1 inline h-3 w-3" />
+              {deadlineLabel}
             </span>
-            <span className="px-2 py-0.5 rounded-full bg-love/10 text-love font-medium">
-              ⏱ {formatTime(localSeconds)}
+            <span className="rounded-full bg-love/10 px-2 py-0.5 font-medium text-love">
+              Timer {formatTime(localSeconds)}
             </span>
             <button
               onClick={() => setShowMaterials(!showMaterials)}
-              className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+              className="rounded-full bg-primary/10 px-2 py-0.5 font-medium text-primary transition-colors hover:bg-primary/20"
             >
-              <Paperclip className="w-3 h-3 inline mr-1" />
-              {materials.length}
+              <Paperclip className="mr-1 inline h-3 w-3" />
+              {loading ? "..." : materials.length}
             </button>
           </div>
         </div>
 
-        <div className="flex gap-1.5 flex-shrink-0">
+        <div className="flex flex-shrink-0 gap-1.5">
           {!isAdmin && (
             <button
               onClick={handleToggleStopwatch}
-              className="p-1.5 rounded-xl hover:bg-secondary transition-colors"
+              className="rounded-xl p-1.5 transition-colors hover:bg-secondary"
               title={localRunning ? "Pause" : "Start timer"}
             >
-              {localRunning ? (
-                <Pause className="w-4 h-4 text-love" />
-              ) : (
-                <Play className="w-4 h-4 text-primary" />
-              )}
+              {localRunning ? <Pause className="h-4 w-4 text-love" /> : <Play className="h-4 w-4 text-primary" />}
             </button>
           )}
           {isAdmin && (
             <button
               onClick={() => onDelete(task.id)}
-              className="p-1.5 rounded-xl hover:bg-destructive/10 transition-colors"
+              className="rounded-xl p-1.5 transition-colors hover:bg-destructive/10"
             >
-              <Trash2 className="w-4 h-4 text-destructive/70" />
+              <Trash2 className="h-4 w-4 text-destructive/70" />
             </button>
           )}
         </div>
@@ -151,7 +147,7 @@ const TaskItem = ({ task, onToggle, onDelete, onUpdateStopwatch, onDeadlineClose
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-4 pt-4 border-t border-border/50"
+            className="mt-4 border-t border-border/50 pt-4"
           >
             <TaskMaterials
               taskId={task.id}
