@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Calendar, Sun, Cloud, CloudRain, Snowflake, Droplets, Clock, CheckSquare, Utensils, FileText, ArrowLeft, Save } from "lucide-react";
-import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import PlannerReports from "./PlannerReports";
+import { toPng } from "html-to-image";
+import { Calendar, Sun, Cloud, CloudRain, Snowflake, Droplets, Clock, CheckSquare, Utensils, FileText, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface PlannerData {
   mood: string;
@@ -28,41 +27,12 @@ interface PlannerData {
   forTomorrow: string;
 }
 
-const WaterGlass = ({ filled, index, total }: { filled: boolean; index: number; total: number }) => {
-  const fillPercent = filled ? 100 : 0;
-  return (
-    <div className="relative w-8 h-10 flex items-end justify-center">
-      <svg viewBox="0 0 32 40" className="w-full h-full">
-        {/* Glass outline */}
-        <path
-          d="M6 4 L4 36 Q4 38 6 38 L26 38 Q28 38 28 36 L26 4 Z"
-          fill="none"
-          stroke="#86efac"
-          strokeWidth="2"
-        />
-        {/* Water fill */}
-        <clipPath id={`glass-clip-${index}`}>
-          <path d="M6 4 L4 36 Q4 38 6 38 L26 38 Q28 38 28 36 L26 4 Z" />
-        </clipPath>
-        <rect
-          x="4"
-          y={4 + (34 * (1 - fillPercent / 100))}
-          width="24"
-          height={34 * (fillPercent / 100)}
-          fill="#60a5fa"
-          opacity="0.6"
-          clipPath={`url(#glass-clip-${index})`}
-          className="transition-all duration-500"
-        />
-      </svg>
-    </div>
-  );
-};
-
 const DailyPlanner = () => {
   const today = new Date().toISOString().split('T')[0];
   const storedDate = localStorage.getItem('planner-date');
+  const plannerRef = useRef<HTMLDivElement>(null);
   
+  // Reset if it's a new day
   if (storedDate !== today) {
     localStorage.removeItem('daily-planner');
     localStorage.setItem('planner-date', today);
@@ -71,69 +41,68 @@ const DailyPlanner = () => {
   const [plannerData, setPlannerData] = useState<PlannerData>(() => {
     const saved = localStorage.getItem('daily-planner');
     if (saved) return JSON.parse(saved);
+    
     return {
-      mood: '', date: today, selectedDays: [], weather: '',
-      hoursOfSleep: 0, howRested: '', reminder: '', waterIntake: 0,
+      mood: '',
+      date: today,
+      selectedDays: [],
+      weather: '',
+      hoursOfSleep: 0,
+      howRested: '',
+      reminder: '',
+      waterIntake: 0,
       otherDrinks: '',
-      schedule: Array(8).fill(null).map(() => ({ time: '', activity: '' })),
-      todo: Array(6).fill(null).map(() => ({ text: '', completed: false })),
-      workout: '', totalMinutes: '', totalSteps: '',
-      breakfast: '', lunch: '', dinner: '', snacks: '',
-      notes: '', forTomorrow: ''
+      schedule: Array(8).fill(null).map((_, i) => ({ time: '', activity: '' })),
+      todo: Array(6).fill(null).map((_, i) => ({ text: '', completed: false })),
+      workout: '',
+      totalMinutes: '',
+      totalSteps: '',
+      breakfast: '',
+      lunch: '',
+      dinner: '',
+      snacks: '',
+      notes: '',
+      forTomorrow: ''
     };
   });
-
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
 
   useEffect(() => {
     localStorage.setItem('daily-planner', JSON.stringify(plannerData));
   }, [plannerData]);
 
-  const updateField = (field: keyof PlannerData, value: any) => {
+  const updateField = <K extends keyof PlannerData>(field: K, value: PlannerData[K]) => {
     setPlannerData(prev => ({ ...prev, [field]: value }));
-    setSaved(false);
   };
 
-  const saveToDB = async () => {
-    if (!supabase) return;
-    setSaving(true);
+  const handleDownloadPng = async () => {
+    if (!plannerRef.current) return;
+
+    setIsDownloading(true);
+    setDownloadError("");
+
     try {
-      await (supabase as any).from("planner_entries").upsert({
-        date: plannerData.date,
-        mood: plannerData.mood,
-        weather: plannerData.weather,
-        hours_of_sleep: plannerData.hoursOfSleep,
-        how_rested: plannerData.howRested,
-        reminder: plannerData.reminder,
-        water_intake: plannerData.waterIntake,
-        other_drinks: plannerData.otherDrinks,
-        schedule: plannerData.schedule,
-        todo: plannerData.todo,
-        workout: plannerData.workout,
-        total_minutes: plannerData.totalMinutes,
-        total_steps: plannerData.totalSteps,
-        breakfast: plannerData.breakfast,
-        lunch: plannerData.lunch,
-        dinner: plannerData.dinner,
-        snacks: plannerData.snacks,
-        notes: plannerData.notes,
-        for_tomorrow: plannerData.forTomorrow,
-      }, { onConflict: 'date' });
-      setSaved(true);
-    } catch (e) {
-      console.error("Save failed:", e);
+      const dataUrl = await toPng(plannerRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#f0fdf4",
+        filter: (node) => !(node instanceof HTMLElement && node.dataset.exportIgnore === "true"),
+      });
+
+      const link = document.createElement("a");
+      link.download = `loops-day-planner-${plannerData.date || today}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error("Failed to export planner as PNG:", error);
+      setDownloadError("Couldn't download the PNG right now. Try again in a second.");
+    } finally {
+      setIsDownloading(false);
     }
-    setSaving(false);
   };
 
-  // Auto-save every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(saveToDB, 30000);
-    return () => clearInterval(interval);
-  }, [plannerData]);
-
-  const moods = ['😊', '😐', '😔', '😴', '🤗', '😠'];
+  const moods = ['😊', '😐', '😔', '😴', '🤗'];
   const weathers = [
     { icon: Sun, label: 'sunny' },
     { icon: Cloud, label: 'cloudy' },
@@ -144,26 +113,39 @@ const DailyPlanner = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-white p-4">
       <div className="max-w-4xl mx-auto">
+        <div
+          data-export-ignore="true"
+          className="mb-6 flex flex-col gap-3 rounded-2xl border border-green-200 bg-white/90 p-4 shadow-sm md:flex-row md:items-center md:justify-between"
+        >
+          <div>
+            <p className="text-sm font-medium text-green-800">Save the finished day as a memory</p>
+            <p className="text-sm text-green-700/80">Download the full planner page as a PNG whenever you want to keep that day's snapshot.</p>
+          </div>
+          <Button
+            type="button"
+            onClick={handleDownloadPng}
+            disabled={isDownloading}
+            className="bg-green-600 text-white hover:bg-green-700"
+          >
+            <Download className="h-4 w-4" />
+            {isDownloading ? "Preparing PNG..." : "Download Day as PNG"}
+          </Button>
+        </div>
+
+        {downloadError && (
+          <div data-export-ignore="true" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {downloadError}
+          </div>
+        )}
+
+        <div ref={plannerRef}>
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <Link to="/" className="inline-flex items-center gap-1 text-green-600 hover:text-green-800 text-sm mb-4 transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Back to home
-          </Link>
           <h1 className="text-4xl font-bold text-green-800 mb-2">Daily Planner</h1>
           <p className="text-green-600">Organize your day with peace and clarity 🌿</p>
-          <button
-            onClick={saveToDB}
-            disabled={saving}
-            className={`mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-              saved ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'
-            }`}
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'Saving...' : saved ? 'Saved! ✓' : 'Save to Cloud ☁️'}
-          </button>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -175,14 +157,14 @@ const DailyPlanner = () => {
             className="bg-white rounded-2xl shadow-lg p-6 border-2 border-green-200"
           >
             <h3 className="text-lg font-semibold text-green-800 mb-4">Mood</h3>
-            <div className="flex justify-around flex-wrap gap-2">
+            <div className="flex justify-around">
               {moods.map((mood) => (
                 <button
                   key={mood}
                   onClick={() => updateField('mood', mood)}
                   className={`text-3xl p-2 rounded-xl transition-all ${
                     plannerData.mood === mood
-                      ? 'bg-green-100 border-2 border-green-400 scale-110'
+                      ? 'bg-green-100 border-2 border-green-400'
                       : 'hover:bg-green-50 border-2 border-transparent'
                   }`}
                 >
@@ -200,7 +182,8 @@ const DailyPlanner = () => {
             className="bg-white rounded-2xl shadow-lg p-6 border-2 border-green-200"
           >
             <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5" /> Date
+              <Calendar className="w-5 h-5" />
+              Date
             </h3>
             <input
               type="date"
@@ -211,16 +194,15 @@ const DailyPlanner = () => {
             <div className="flex justify-around mt-3">
               {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
                 <button
-                  key={`${day}-${i}`}
+                  key={day}
                   onClick={() => {
-                    const dayKey = `${day}-${i}`;
-                    const newDays = plannerData.selectedDays.includes(dayKey)
-                      ? plannerData.selectedDays.filter(d => d !== dayKey)
-                      : [...plannerData.selectedDays, dayKey];
+                    const newDays = plannerData.selectedDays.includes(day)
+                      ? plannerData.selectedDays.filter(d => d !== day)
+                      : [...plannerData.selectedDays, day];
                     updateField('selectedDays', newDays);
                   }}
                   className={`w-8 h-8 rounded-full text-sm font-medium transition-all ${
-                    plannerData.selectedDays.includes(`${day}-${i}`)
+                    plannerData.selectedDays.includes(day)
                       ? 'bg-green-500 text-white'
                       : 'bg-green-100 text-green-700 hover:bg-green-200'
                   }`}
@@ -266,7 +248,11 @@ const DailyPlanner = () => {
             <h3 className="text-lg font-semibold text-green-800 mb-4">Hours of Sleep</h3>
             <div className="flex justify-center gap-1 mb-3">
               {[1, 2, 3, 4, 5, 6, 7].map((star) => (
-                <button key={star} onClick={() => updateField('hoursOfSleep', star)} className="text-2xl transition-all">
+                <button
+                  key={star}
+                  onClick={() => updateField('hoursOfSleep', star)}
+                  className="text-2xl transition-all"
+                >
                   {star <= plannerData.hoursOfSleep ? '⭐' : '☆'}
                 </button>
               ))}
@@ -296,7 +282,7 @@ const DailyPlanner = () => {
             />
           </motion.div>
 
-          {/* Water Intake with Glass Icons */}
+          {/* Water Intake */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -304,12 +290,17 @@ const DailyPlanner = () => {
             className="bg-white rounded-2xl shadow-lg p-6 border-2 border-green-200"
           >
             <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
-              <Droplets className="w-5 h-5" /> Water
+              <Droplets className="w-5 h-5" />
+              Water
             </h3>
-            <div className="flex justify-center gap-2 mb-3">
-              {[1, 2, 3, 4, 5, 6, 7].map((glass) => (
-                <button key={glass} onClick={() => updateField('waterIntake', glass)} className="transition-all hover:scale-110">
-                  <WaterGlass filled={glass <= plannerData.waterIntake} index={glass} total={7} />
+            <div className="flex justify-center gap-1 mb-3">
+              {[1, 2, 3, 4, 5, 6, 7].map((drop) => (
+                <button
+                  key={drop}
+                  onClick={() => updateField('waterIntake', drop)}
+                  className="text-2xl transition-all"
+                >
+                  {drop <= plannerData.waterIntake ? '💧' : '🪫'}
                 </button>
               ))}
             </div>
@@ -330,7 +321,8 @@ const DailyPlanner = () => {
             className="bg-white rounded-2xl shadow-lg p-6 border-2 border-green-200 md:col-span-2"
           >
             <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
-              <Clock className="w-5 h-5" /> Schedule
+              <Clock className="w-5 h-5" />
+              Schedule
             </h3>
             <div className="space-y-2">
               {plannerData.schedule.map((item, i) => (
@@ -369,7 +361,8 @@ const DailyPlanner = () => {
             className="bg-white rounded-2xl shadow-lg p-6 border-2 border-green-200"
           >
             <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
-              <CheckSquare className="w-5 h-5" /> To Do
+              <CheckSquare className="w-5 h-5" />
+              To Do
             </h3>
             <div className="space-y-2">
               {plannerData.todo.map((item, i) => (
@@ -443,7 +436,8 @@ const DailyPlanner = () => {
             className="bg-white rounded-2xl shadow-lg p-6 border-2 border-green-200 md:col-span-2"
           >
             <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
-              <Utensils className="w-5 h-5" /> Meal Tracker
+              <Utensils className="w-5 h-5" />
+              Meal Tracker
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               {[
@@ -474,7 +468,8 @@ const DailyPlanner = () => {
             className="bg-white rounded-2xl shadow-lg p-6 border-2 border-green-200"
           >
             <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5" /> Notes
+              <FileText className="w-5 h-5" />
+              Notes
             </h3>
             <textarea
               placeholder="Notes for today..."
@@ -500,9 +495,7 @@ const DailyPlanner = () => {
             />
           </motion.div>
         </div>
-
-        {/* Planner Reports Tab */}
-        <PlannerReports />
+        </div>
       </div>
     </div>
   );

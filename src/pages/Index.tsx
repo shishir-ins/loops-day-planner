@@ -6,6 +6,7 @@ import FloatingLeaves from "@/components/FloatingLeaves";
 import PixelCharacters from "@/components/PixelCharacters";
 import LoveMessages from "@/components/LoveMessages";
 import DateTimeClock from "@/components/DateTimeClock";
+import PwaInstallCard from "@/components/PwaInstallCard";
 import TaskItem from "@/components/TaskItem";
 import TaskInput from "@/components/TaskInput";
 import SurpriseMessage from "@/components/SurpriseMessage";
@@ -20,7 +21,7 @@ const Index = () => {
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState(false);
   const { tasks, loading, toggleComplete, deleteTask, updateStopwatch, addTask } = useTasks();
-  const { notifyNewTask, notifyDeadline } = useNotifications();
+  const { notifyNewTask, notifyDeadline, notificationsSupported, permission, requestPermission } = useNotifications();
   const notifiedRef = useRef<Set<string>>(new Set());
   const prevTaskIdsRef = useRef<Set<string>>(new Set());
 
@@ -121,6 +122,12 @@ const Index = () => {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="glass rounded-2xl px-6 py-4 mb-6 w-full">
           <DateTimeClock />
         </motion.div>
+
+        <PwaInstallCard
+          notificationsSupported={notificationsSupported}
+          permission={permission}
+          requestPermission={requestPermission}
+        />
 
         {supabaseConfigError && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full mb-6 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
