@@ -5,6 +5,10 @@ const characters = [
   { emoji: "🧸", bottom: "8%", side: "right", startX: "85%" },
   { emoji: "🐼", bottom: "20%", side: "left", startX: "8%" },
   { emoji: "🧸", bottom: "15%", side: "right", startX: "90%" },
+  { emoji: "🐤", bottom: "12%", side: "left", startX: "15%" },
+  { emoji: "🐥", bottom: "25%", side: "right", startX: "80%" },
+  { emoji: "🐣", bottom: "3%", side: "right", startX: "70%" },
+  { emoji: "🐤", bottom: "18%", side: "left", startX: "5%" },
 ];
 
 const PixelCharacters = () => (
@@ -24,10 +28,10 @@ const PixelCharacters = () => (
           y: [0, -8, 0, -8, 0],
         }}
         transition={{
-          duration: 4 + i,
+          duration: 4 + i * 0.5,
           repeat: Infinity,
           ease: "easeInOut",
-          delay: i * 1.2,
+          delay: i * 0.8,
         }}
       >
         {c.emoji}
